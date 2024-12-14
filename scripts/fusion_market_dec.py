@@ -2,9 +2,8 @@ import json
 import csv
 
 path_json = 'data_raw/dados_empresaA.json'
-
-old_csv = 'data_raw/dados_empresaB.csv'
-new_csv_fixed = 'data_processed/dados_empresaB_fixed.csv'
+path_csv = 'data_raw/dados_empresaB.csv'
+path_merged_data = 'data_processed/merged_data.csv'
 
 key_mapping = {'Nome do Item': 'Nome do Produto',
                 'Classificação do Produto': 'Categoria do Produto',
@@ -22,87 +21,105 @@ def read_csv(path_csv):
     data_csv = []
 
     with open(path_csv, 'r') as file:
-        spamreader = csv.DictReader(file, delimiter=',')
-
-        for row in spamreader:
+        reader = csv.reader(file)
+        for row in reader:
             data_csv.append(row)
     
     return data_csv
-    # with open(path_csv, 'r') as file:
-    #     reader = csv.reader(file)
-    #     return list(reader)
+
+def read_data(path: str, dataType: str):
+    if(dataType == 'json'):
+        return read_json(path)
+    elif(dataType == 'csv'):
+        return read_csv(path)
+
+def fix_list_header(list: list, dict_header: dict): 
+    new_header = []
+    list_header_fixed = []
     
-def data_reader(path, type):
-    data = []
-    if type == 'json':
-        data = read_json(path)
-    elif type == 'csv':
-        data = read_csv(path)
+    new_header = [dict_header.get(row) for row in list[0]]
 
-    return data
+    list_header_fixed.append(new_header)
+    list_header_fixed.extend(list[1:])
 
-def fix_csv_header(old_csv, new_csv_fixed):
-    with open(old_csv, 'r') as old_file, open(new_csv_fixed, 'w') as new_file:
-        reader = csv.reader(old_file)
-        writer = csv.writer(new_file)
+    return list_header_fixed
 
-        original_header = next(reader)
-        renamed_header = [key_mapping.get(coluna, coluna) for coluna in original_header]
-        
-        writer.writerow(renamed_header)
+def list_into_dict(list: list):
+    list = [dict(zip(list[0], values)) for values in list[1:]]
+    return list
 
-        for row in reader:
-            writer.writerow(row)
-
-def join(dataA, dataB):
+def merge_lists(data1, data2):
     merged_list = []
-    merged_list.extend(dataA)
-    merged_list.extend(dataB)
+    merged_list.extend(data1)
+    merged_list.extend(data2)
     return merged_list
 
-def transform_data_table(merged_list, column_names):
-    merged_data_table = [column_names] #adiciona o cabeçalho na lista final
+def data_merge_validation(merged_data, data1, data2):
+    data1_last_item = len(data1)-1
+    data2_last_item = len(data2)-1
+    merged_data2_initial_pos = len(data1)
+    merged_data_last_position = len(merged_data)-1
 
-    for row in merged_list:
-        row_data = []
+    data1_state = False
+    data2_state = False
+
+    print("\nFIRST DATA ========================================")
+    if(merged_data[0] == data1[0]): 
+        print("First Item: OK")
+        data1_state = True
+    else: 
+        print("WARNING: The first item merged does not combine with the first item of the first dataset")
+        data1_state = False
+    
+    if(merged_data[data1_last_item] == data1[data1_last_item]): 
+        print("Last Item: OK")
+        data1_state = True
+    else: 
+        print("WARNING: The last item merged does not combine with the first item of the last dataset")
+        data1_state = False
+
+    print("\nSECOND DATA ========================================")    
+    if(merged_data[merged_data2_initial_pos] == data2[0]): 
+        print("First item of data 2: OK")
+        data2_state = True
+    else: 
+        print("WARNING: The first item merged does not combine with the first item of the second dataset")
+        data2_state = False
+    
+    if(merged_data[merged_data_last_position] == data2[data2_last_item]): 
+        print("Last Item of data 2: OK")
+        data2_state = True
+    else: 
+        print("WARNING: The last item merged does not combine with the first data of the last dataset\n")
+        data2_state = False
+    
+    if(data1_state and data2_state): return True
+    else: return False
+
+def fix_null_dict_data(data: dict):
+    column_names = list(data[-1].keys())
+    merged_column_fixed_data = [column_names]
+
+    for item in data:
+        fixed_item = []
         for column in column_names:
-            row_data.append(row.get(column, 'Indisponivel')) #cria uma nova lista com os dados corrigidos
-        merged_data_table.append(row_data) #adiciona todos os dados corrigidos na lista com o cabeçalho correto
+            fixed_item.append(item.get(column, 'Indisponivel')) #cria uma nova lista com os dados corrigidos
+        merged_column_fixed_data.append(fixed_item) #adiciona todos os dados corrigidos na lista com o cabeçalho correto
+    return merged_column_fixed_data
 
-    return merged_data_table
-
-def show_data_properties(data, data_name = ''):
-    if(data_name != ''):
-       print("============" + data_name + "============")
-    print(get_columns(data))
-    print(len(data))
-
-def get_columns(data):
-    try: #if json / dictionary
-        return list(data[-1].keys())
-    except: #if csv / list
-        return data[0]
-
-def saving_data(data, path):
+def write_csv(path: str, data: list):
     with open(path, 'w') as file:
         writer = csv.writer(file)
         writer.writerows(data)
 
-fix_csv_header(old_csv, new_csv_fixed)
+data_json = read_data(path_json, 'json')
+data_csv = read_data(path_csv, 'csv')
 
-data_json = data_reader(path_json, 'json')
-show_data_properties(data_json, 'Data A')
+data_csv_header_fixed = fix_list_header(data_csv, key_mapping)
+data_csv_into_dict = list_into_dict(data_csv_header_fixed)
 
-data_csv = data_reader(new_csv_fixed, 'csv')
-show_data_properties(data_csv, 'Data B')
+merged_data = merge_lists(data_json, data_csv_into_dict)
 
-data_fusion = join(data_json, data_csv)
-data_fusion_columns = get_columns(data_fusion)
-show_data_properties(data_fusion, 'Merged Data')
-
-data_fusion_table = transform_data_table(data_fusion, data_fusion_columns)
-
-path_merged_data = 'data_processed/merged_data.csv'
-
-saving_data(data_fusion_table, path_merged_data)
-
+if(data_merge_validation(merged_data, data_json, data_csv_into_dict)):
+    merged_data_nulls_fixed = fix_null_dict_data(merged_data)
+    write_csv(path_merged_data, merged_data_nulls_fixed)
