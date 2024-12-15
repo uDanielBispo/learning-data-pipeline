@@ -19,3 +19,6 @@ Após isso, basta voce instalar o python (caso não tenha) e o pip
 ## Rodando:
 
 Use o comando ``` source venv/bin/activate ``` no terminal da pasta para iniciar o ambiente virtual, após isso, basta acessar o arquivo exploring.ipynb e visualizar o que foi feito até o momento, se tiver duvidas é só me chamar por aqui ou por alguma rede social (acessa meu perfil e voce vai achar minhas redes)
+
+### Esse projeto foi desenvolvido graças ao apoio da escola Alura
+Link do certificado https://cursos.alura.com.br/user/danielbispo3015/course/pipeline-dados-combinando-python-orientacao-objeto/certificate
